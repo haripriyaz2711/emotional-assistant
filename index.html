@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Recognition Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .emoji {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .instructions {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .instructions h3 {
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🎭</div>
+        <h1>Emotion Recognition Assistant</h1>
+        <p>I will automatically detect your emotion and have a conversation with you!</p>
+        
+        <div class="status">
+            <div class="status-item">
+                <span>System Status:</span>
+                <span id="systemStatus">Ready</span>
+            </div>
+            <div class="status-item">
+                <span>Camera:</span>
+                <span id="cameraStatus">Ready</span>
+            </div>
+            <div class="status-item">
+                <span>Microphone:</span>
+                <span id="micStatus">Ready</span>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>What will happen:</h3>
+            <ul>
+                <li>Camera will open to detect your emotion</li>
+                <li>AI will speak and ask about your feelings</li>
+                <li>Speak naturally - AI will listen and respond</li>
+                <li>Say "thank you" or "bye" to end</li>
+            </ul>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Starting emotion detection...</p>
+        </div>
+
+        <div id="message"></div>
+
+        <button onclick="startConversation()" style="
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        ">Start Emotion Detection</button>
+    </div>
+
+    <script>
+        // Auto-start when page loads
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                startConversation();
+            }, 1000);
+        });
+
+        async function startConversation() {
+            const loading = document.getElementById('loading');
+            const message = document.getElementById('message');
+            const systemStatus = document.getElementById('systemStatus');
+            const button = document.querySelector('button');
+            
+            // Update UI
+            button.disabled = true;
+            button.textContent = 'Starting...';
+            loading.style.display = 'block';
+            systemStatus.textContent = 'Starting...';
+            systemStatus.style.color = '#ffc107';
+            
+            // Clear previous messages
+            message.innerHTML = '';
+            
+            try {
+                const response = await fetch('/start_conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    message.innerHTML = `<div class="message success">✅ ${data.message}</div>`;
+                    systemStatus.textContent = 'Active';
+                    systemStatus.style.color = '#28a745';
+                    
+                    // Check if main.py is running
+                    setTimeout(() => {
+                        checkIfRunning();
+                    }, 3000);
+                    
+                } else {
+                    message.innerHTML = `<div class="message error">❌ ${data.error}</div>`;
+                    systemStatus.textContent = 'Error';
+                    systemStatus.style.color = '#dc3545';
+                    button.disabled = false;
+                    button.textContent = 'Try Again';
+                }
+            } catch (error) {
+                message.innerHTML = `<div class="message error">❌ Connection error: ${error.message}</div>`;
+                systemStatus.textContent = 'Error';
+                systemStatus.style.color = '#dc3545';
+                button.disabled = false;
+                button.textContent = 'Try Again';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function checkIfRunning() {
+            const message = document.getElementById('message');
+            const currentContent = message.innerHTML;
+            
+            if (!currentContent.includes('Camera should open')) {
+                message.innerHTML += `<div class="message" style="background: #fff3cd; color: #856404; margin-top: 10px;">
+                    ⚠ If camera doesn't open automatically, check your command prompt window.
+                </div>`;
+            }
+        }
+    </script>
+</body>
+</html>
